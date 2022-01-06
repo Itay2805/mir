@@ -42,11 +42,10 @@ static inline void mir_htab_assert_fail (const char *op, const char *var) {
 static inline void MIR_HTAB_NO_RETURN mir_htab_error (const char *message) {
 #ifdef MIR_HTAB_ERROR
   MIR_HTAB_ERROR (message);
-  assert (FALSE);
 #else
-  fprintf (stderr, "%s\n", message);
+  ERROR ("%s", message);
 #endif
-  exit (1);
+  ASSERT (FALSE);
 }
 
 /*---------------- Typed hash table -----------------------------*/

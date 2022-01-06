@@ -8,8 +8,7 @@
 
 #define MIR_DLIST_H
 
-#include <stdio.h>
-#include <assert.h>
+#include <util/except.h>
 
 #if !defined(DLIST_ENABLE_CHECKING) && !defined(NDEBUG)
 #define DLIST_ENABLE_CHECKING
@@ -20,8 +19,8 @@
 
 #else
 static inline void dlist_assert_fail (const char* op, const char* var) {
-  fprintf (stderr, "wrong %s for %s", op, var);
-  assert (0);
+  ERROR ("wrong %s for %s", op, var);
+  ASSERT (0);
 }
 
 #define DLIST_ASSERT(EXPR, OP, T) (void) ((EXPR) ? 0 : (dlist_assert_fail (OP, #T), 0))

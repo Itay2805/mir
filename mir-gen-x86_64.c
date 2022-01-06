@@ -3,6 +3,7 @@
 */
 
 #include <limits.h>
+#include <util/stb_ds.h>
 
 #define HREG_EL(h) h##_HARD_REG
 #define REP_SEP ,
@@ -2430,9 +2431,12 @@ static uint8_t *target_translate (gen_ctx_t gen_ctx, size_t *len) {
     } else {
       replacement = find_insn_pattern_replacement (gen_ctx, insn);
       if (replacement == NULL) {
-        fprintf (stderr, "%d: fatal failure in matching insn:", gen_ctx->gen_num);
-        MIR_output_insn (ctx, stderr, insn, curr_func_item->u.func, TRUE);
-        exit (1);
+        ERROR ("%d: fatal failure in matching insn:", gen_ctx->gen_num);
+        buffer_t* buffer = create_buffer();
+        MIR_output_insn (ctx, buffer, insn, curr_func_item->u.func, TRUE);
+        ERROR(".*%s", arrlen(buffer->buffer), buffer->buffer);
+        destroy_buffer(buffer);
+        ASSERT (0);
       } else {
         gen_assert (replacement != NULL);
         out_insn (gen_ctx, insn, replacement);

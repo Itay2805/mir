@@ -114,7 +114,7 @@ void va_start_interp_builtin (MIR_context_t ctx, void *p, void *a) {
   struct x86_64_va_list *va = p;
   va_list *vap = a;
 
-  assert (sizeof (struct x86_64_va_list) == sizeof (va_list));
+  ASSERT (sizeof (struct x86_64_va_list) == sizeof (va_list));
   *va = *(struct x86_64_va_list *) vap;
 }
 
@@ -230,7 +230,7 @@ static void gen_mov (VARR (uint8_t) * insn_varr, uint32_t offset, uint32_t reg, 
   uint8_t *addr = push_insns (insn_varr, ld_p ? ld_gp_reg : st_gp_reg,
                               ld_p ? sizeof (ld_gp_reg) : sizeof (st_gp_reg));
   memcpy (addr + 3, &offset, sizeof (uint32_t));
-  assert (reg <= 15);
+  ASSERT (reg <= 15);
   addr[0] |= (reg >> 1) & 4;
   addr[2] |= (reg & 7) << 3;
 }
@@ -241,7 +241,7 @@ static void gen_mov2 (VARR (uint8_t) * insn_varr, uint32_t offset, uint32_t reg,
   uint8_t *addr = push_insns (insn_varr, ld_p ? ld_gp_reg : st_gp_reg,
                               ld_p ? sizeof (ld_gp_reg) : sizeof (st_gp_reg));
   addr[4] = offset;
-  assert (reg <= 15);
+  ASSERT (reg <= 15);
   addr[0] |= (reg >> 1) & 4;
   addr[2] |= (reg & 7) << 3;
 }
@@ -274,7 +274,7 @@ static void gen_movxmm (VARR (uint8_t) * insn_varr, uint32_t offset, uint32_t re
   uint8_t *addr = push_insns (insn_varr, ld_p ? ld_xmm_reg_pat : st_xmm_reg_pat,
                               ld_p ? sizeof (ld_xmm_reg_pat) : sizeof (st_xmm_reg_pat));
   memcpy (addr + 4, &offset, sizeof (uint32_t));
-  assert (reg <= 7);
+  ASSERT (reg <= 7);
   addr[3] |= reg << 3;
   if (b32_p) addr[0] |= 1;
 }
@@ -289,7 +289,7 @@ static void gen_movxmm2 (VARR (uint8_t) * insn_varr, uint32_t offset, uint32_t r
   uint8_t *addr = push_insns (insn_varr, ld_p ? ld_xmm_reg_pat : st_xmm_reg_pat,
                               ld_p ? sizeof (ld_xmm_reg_pat) : sizeof (st_xmm_reg_pat));
   addr[6] = offset;
-  assert (reg <= 7);
+  ASSERT (reg <= 7);
   addr[4] |= reg << 3;
 }
 
@@ -435,7 +435,7 @@ void *_MIR_get_ff_call (MIR_context_t ctx, size_t nres, MIR_type_t *res_types, s
       qwords = (arg_descs[i].size + 7) / 8;
 #ifndef _WIN32
       if (type == MIR_T_BLK + 1 && n_iregs + qwords <= max_iregs) {
-        assert (qwords <= 2);
+        ASSERT (qwords <= 2);
         gen_mov (code, (i + nres) * sizeof (long double), 12, TRUE);   /* r12 = block addr */
         gen_mov2 (code, 0, iregs[n_iregs], TRUE);                      /* arg_reg = mem[r12] */
         if (qwords == 2) gen_mov2 (code, 8, iregs[n_iregs + 1], TRUE); /* arg_reg = mem[r12 + 8] */
@@ -443,14 +443,14 @@ void *_MIR_get_ff_call (MIR_context_t ctx, size_t nres, MIR_type_t *res_types, s
         n_xregs += qwords;
         continue;
       } else if (type == MIR_T_BLK + 2 && n_xregs + qwords <= max_xregs) {
-        assert (qwords <= 2);
+        ASSERT (qwords <= 2);
         gen_mov (code, (i + nres) * sizeof (long double), 12, TRUE); /* r12 = block addr */
         gen_movxmm2 (code, 0, n_xregs, TRUE);                        /* xmm = mem[r12] */
         if (qwords == 2) gen_movxmm2 (code, 8, n_xregs + 1, TRUE);   /* xmm = mem[r12 +  8] */
         n_xregs += qwords;
         continue;
       } else if (type == MIR_T_BLK + 3 && n_iregs < max_iregs && n_xregs < max_xregs) {
-        assert (qwords == 2);
+        ASSERT (qwords == 2);
         gen_mov (code, (i + nres) * sizeof (long double), 12, TRUE); /* r12 = block addr */
         gen_mov2 (code, 0, iregs[n_iregs], TRUE);                    /* arg_reg = mem[r12] */
         n_iregs++;
@@ -459,7 +459,7 @@ void *_MIR_get_ff_call (MIR_context_t ctx, size_t nres, MIR_type_t *res_types, s
         n_xregs++;
         continue;
       } else if (type == MIR_T_BLK + 4 && n_iregs < max_iregs && n_xregs < max_xregs) {
-        assert (qwords == 2);
+        ASSERT (qwords == 2);
         gen_mov (code, (i + nres) * sizeof (long double), 12, TRUE); /* r12 = block addr */
         gen_movxmm2 (code, 0, n_xregs, TRUE);                        /* xmm = mem[r12] */
         n_xregs++;

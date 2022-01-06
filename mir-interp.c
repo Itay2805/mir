@@ -1328,7 +1328,7 @@ static void OPTIMIZE eval (MIR_context_t ctx, func_desc_t func_desc, MIR_val_t *
     int64_t *r, s;
 
     r = get_2iops (bp, ops, &s);
-    *r = (uint64_t) alloca (s);
+    *r = (uint64_t) __builtin_alloca (s);
     END_INSN;
   }
   CASE (MIR_BSTART, 1) {
@@ -1624,7 +1624,7 @@ static void interp_arr_varg (MIR_context_t ctx, MIR_item_t func_item, MIR_val_t 
   mir_assert (func_item->item_type == MIR_func_item);
   if (func_item->data == NULL) generate_icode (ctx, func_item);
   func_desc = get_func_desc (func_item);
-  bp = alloca ((func_desc->nregs + 2) * sizeof (MIR_val_t));
+  bp = __builtin_alloca ((func_desc->nregs + 2) * sizeof (MIR_val_t));
   bp++; /* reserved for setjmp/longjmp */
   bp[0].a = va;
   bp++;
@@ -1664,7 +1664,7 @@ void MIR_interp_arr_varg (MIR_context_t ctx, MIR_item_t func_item, MIR_val_t *re
   mir_assert (func_item->item_type == MIR_func_item);
   if (func_item->data == NULL) generate_icode (ctx, func_item);
   func_desc = get_func_desc (func_item);
-  bp = alloca ((func_desc->nregs + 2) * sizeof (MIR_val_t));
+  bp = __builtin_alloca ((func_desc->nregs + 2) * sizeof (MIR_val_t));
   bp++; /* reserved for setjmp/longjmp */
 #if VA_LIST_IS_ARRAY_P
   bp[0].a = va;
@@ -1724,7 +1724,7 @@ static void interp (MIR_context_t ctx, MIR_item_t func_item, va_list va, MIR_val
     case MIR_T_LD: arg_vals[i].ld = va_arg (va, long double); break;
     case MIR_T_P:
     case MIR_T_RBLK: arg_vals[i].a = va_arg (va, void *); break;
-    default: mir_assert (MIR_blk_type_p (type)); arg_vals[i].a = alloca (arg_vars[i].size);
+    default: mir_assert (MIR_blk_type_p (type)); arg_vals[i].a = __builtin_alloca (arg_vars[i].size);
 #if defined(__PPC64__) || defined(__aarch64__) || defined(__riscv) || defined(_WIN32)
       va_block_arg_builtin (arg_vals[i].a, &va, arg_vars[i].size, type - MIR_T_BLK);
 #else

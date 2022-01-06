@@ -1,4 +1,4 @@
-/* This file is a part of MIR project.
+/* This buffer_t is a part of MIR project.
    Copyright (C) 2018-2021 Vladimir Makarov <vmakarov.gcc@gmail.com>.
 */
 
@@ -146,7 +146,7 @@ struct gen_ctx {
   unsigned optimize_level; /* 0:fast gen; 1:RA+combiner; 2: +GVN/CCP (default); >=3: everything  */
   MIR_item_t curr_func_item;
 #if !MIR_NO_GEN_DEBUG
-  FILE *debug_file;
+  buffer_t *debug_file;
   int debug_level;
 #endif
   bitmap_t insn_to_consider, temp_bitmap, temp_bitmap2;
@@ -429,11 +429,11 @@ typedef struct {
 } const_t;
 
 #if !MIR_NO_GEN_DEBUG
-static void print_const (FILE *f, const_t c) {
+static void print_const (buffer_t *f, const_t c) {
   if (c.uns_p)
-    fprintf (f, "%" PRIu64, c.u.u);
+    bprintf (f, "%" PRIu64, c.u.u);
   else
-    fprintf (f, "%" PRId64, c.u.i);
+    bprintf (f, "%" PRId64, c.u.i);
 }
 #endif
 
@@ -1045,23 +1045,23 @@ static inline int insn_var_iterator_next (gen_ctx_t gen_ctx, insn_var_iterator_t
 static void output_in_edges (gen_ctx_t gen_ctx, bb_t bb) {
   edge_t e;
 
-  fprintf (debug_file, "  in edges:");
+  bprintf (debug_file, "  in edges:");
   for (e = DLIST_HEAD (in_edge_t, bb->in_edges); e != NULL; e = DLIST_NEXT (in_edge_t, e)) {
-    fprintf (debug_file, " %3lu", (unsigned long) e->src->index);
-    if (e->skipped_p) fprintf (debug_file, "(CCP skip)");
+    bprintf (debug_file, " %3lu", (unsigned long) e->src->index);
+    if (e->skipped_p) bprintf (debug_file, "(CCP skip)");
   }
-  fprintf (debug_file, "\n");
+  bprintf (debug_file, "\n");
 }
 
 static void output_out_edges (gen_ctx_t gen_ctx, bb_t bb) {
   edge_t e;
 
-  fprintf (debug_file, "  out edges:");
+  bprintf (debug_file, "  out edges:");
   for (e = DLIST_HEAD (out_edge_t, bb->out_edges); e != NULL; e = DLIST_NEXT (out_edge_t, e)) {
-    fprintf (debug_file, " %3lu", (unsigned long) e->dst->index);
-    if (e->skipped_p) fprintf (debug_file, "(CCP skip)");
+    bprintf (debug_file, " %3lu", (unsigned long) e->dst->index);
+    if (e->skipped_p) bprintf (debug_file, "(CCP skip)");
   }
-  fprintf (debug_file, "\n");
+  bprintf (debug_file, "\n");
 }
 
 static void output_bitmap (gen_ctx_t gen_ctx, const char *head, bitmap_t bm, int var_p) {
@@ -1070,16 +1070,16 @@ static void output_bitmap (gen_ctx_t gen_ctx, const char *head, bitmap_t bm, int
   bitmap_iterator_t bi;
 
   if (bm == NULL || bitmap_empty_p (bm)) return;
-  fprintf (debug_file, "%s", head);
+  bprintf (debug_file, "%s", head);
   FOREACH_BITMAP_BIT (bi, bm, nel) {
-    fprintf (debug_file, " %3lu", (unsigned long) nel);
+    bprintf (debug_file, " %3lu", (unsigned long) nel);
     if (var_p && var_is_reg_p (nel))
-      fprintf (debug_file, "(%s:%s)",
+      bprintf (debug_file, "(%s:%s)",
                MIR_type_str (ctx,
                              MIR_reg_type (ctx, var2reg (gen_ctx, nel), curr_func_item->u.func)),
                MIR_reg_name (ctx, var2reg (gen_ctx, nel), curr_func_item->u.func));
   }
-  fprintf (debug_file, "\n");
+  bprintf (debug_file, "\n");
 }
 
 static int get_op_reg_index (gen_ctx_t gen_ctx, MIR_op_t op);
@@ -1091,14 +1091,14 @@ static void print_bb_insn (gen_ctx_t gen_ctx, bb_insn_t bb_insn, int with_notes_
   bitmap_iterator_t bi;
 
   MIR_output_insn (ctx, debug_file, bb_insn->insn, curr_func_item->u.func, FALSE);
-  fprintf (debug_file, " # indexes: ");
+  bprintf (debug_file, " # indexes: ");
   for (size_t i = 0; i < bb_insn->insn->nops; i++) {
     op = bb_insn->insn->ops[i];
-    if (i != 0) fprintf (debug_file, ",");
+    if (i != 0) bprintf (debug_file, ",");
     if (op.data == NULL)
-      fprintf (debug_file, "_");
+      bprintf (debug_file, "_");
     else
-      fprintf (debug_file, "%d", get_op_reg_index (gen_ctx, op));
+      bprintf (debug_file, "%d", get_op_reg_index (gen_ctx, op));
   }
   if (with_notes_p) {
     for (dead_var_t dv = DLIST_HEAD (dead_var_t, bb_insn->dead_vars); dv != NULL;
@@ -1110,18 +1110,18 @@ static void print_bb_insn (gen_ctx_t gen_ctx, bb_insn_t bb_insn, int with_notes_
         op.mode = MIR_OP_HARD_REG;
         op.u.hard_reg = dv->var;
       }
-      fprintf (debug_file, dv == DLIST_HEAD (dead_var_t, bb_insn->dead_vars) ? " # dead: " : " ");
+      bprintf (debug_file, dv == DLIST_HEAD (dead_var_t, bb_insn->dead_vars) ? " # dead: " : " ");
       MIR_output_op (ctx, debug_file, op, curr_func_item->u.func);
     }
     if (MIR_call_code_p (bb_insn->insn->code)) {
       first_p = TRUE;
       FOREACH_BITMAP_BIT (bi, bb_insn->call_hard_reg_args, nel) {
-        fprintf (debug_file, first_p ? " # call used: hr%ld" : " hr%ld", (unsigned long) nel);
+        bprintf (debug_file, first_p ? " # call used: hr%ld" : " hr%ld", (unsigned long) nel);
         first_p = FALSE;
       }
     }
   }
-  fprintf (debug_file, "\n");
+  bprintf (debug_file, "\n");
 }
 
 static void print_CFG (gen_ctx_t gen_ctx, int bb_p, int pressure_p, int insns_p, int insn_index_p,
@@ -1134,12 +1134,12 @@ static void print_CFG (gen_ctx_t gen_ctx, int bb_p, int pressure_p, int insns_p,
          insn = DLIST_NEXT (MIR_insn_t, insn)) {
       if (bb_p && (insn_bb = get_insn_data_bb (insn)) != bb) {
         bb = insn_bb;
-        fprintf (debug_file, "BB %3lu:\n", (unsigned long) bb->index);
+        bprintf (debug_file, "BB %3lu:\n", (unsigned long) bb->index);
         output_in_edges (gen_ctx, bb);
         output_out_edges (gen_ctx, bb);
         if (bb_info_print_func != NULL) {
           bb_info_print_func (gen_ctx, bb);
-          fprintf (debug_file, "\n");
+          bprintf (debug_file, "\n");
         }
       }
       if (insns_p) MIR_output_insn (gen_ctx->ctx, debug_file, insn, curr_func_item->u.func, TRUE);
@@ -1148,57 +1148,57 @@ static void print_CFG (gen_ctx_t gen_ctx, int bb_p, int pressure_p, int insns_p,
   }
   for (bb = DLIST_HEAD (bb_t, curr_cfg->bbs); bb != NULL; bb = DLIST_NEXT (bb_t, bb)) {
     if (bb_p) {
-      fprintf (debug_file, "BB %3lu", (unsigned long) bb->index);
+      bprintf (debug_file, "BB %3lu", (unsigned long) bb->index);
       if (pressure_p)
-        fprintf (debug_file, " (pressure: int=%d, fp=%d)", bb->max_int_pressure,
+        bprintf (debug_file, " (pressure: int=%d, fp=%d)", bb->max_int_pressure,
                  bb->max_fp_pressure);
       if (bb->loop_node == NULL)
-        fprintf (debug_file, "\n");
+        bprintf (debug_file, "\n");
       else
-        fprintf (debug_file, " (loop%3lu):\n", (unsigned long) bb->loop_node->parent->index);
+        bprintf (debug_file, " (loop%3lu):\n", (unsigned long) bb->loop_node->parent->index);
       output_in_edges (gen_ctx, bb);
       output_out_edges (gen_ctx, bb);
       if (bb_info_print_func != NULL) {
         bb_info_print_func (gen_ctx, bb);
-        fprintf (debug_file, "\n");
+        bprintf (debug_file, "\n");
       }
     }
     if (insns_p) {
       for (bb_insn_t bb_insn = DLIST_HEAD (bb_insn_t, bb->bb_insns); bb_insn != NULL;
            bb_insn = DLIST_NEXT (bb_insn_t, bb_insn)) {
-        if (insn_index_p) fprintf (debug_file, "  %-5lu", (unsigned long) bb_insn->index);
+        if (insn_index_p) bprintf (debug_file, "  %-5lu", (unsigned long) bb_insn->index);
         print_bb_insn (gen_ctx, bb_insn, TRUE);
       }
-      fprintf (debug_file, "\n");
+      bprintf (debug_file, "\n");
     }
   }
 }
 
 static void print_varr_insns (gen_ctx_t gen_ctx, const char *title, VARR (bb_insn_t) * bb_insns) {
-  fprintf (debug_file, "%s insns:\n", title);
+  bprintf (debug_file, "%s insns:\n", title);
   for (size_t i = 0; i < VARR_LENGTH (bb_insn_t, bb_insns); i++) {
     bb_insn_t bb_insn = VARR_GET (bb_insn_t, bb_insns, i);
     if (bb_insn == NULL) continue;
-    fprintf (debug_file, "  %-5lu", (unsigned long) bb_insn->index);
+    bprintf (debug_file, "  %-5lu", (unsigned long) bb_insn->index);
     print_bb_insn (gen_ctx, bb_insn, TRUE);
   }
 }
 
 static void print_loop_subtree (gen_ctx_t gen_ctx, loop_node_t root, int level, int bb_p) {
   if (root->bb != NULL && !bb_p) return;
-  for (int i = 0; i < 2 * level + 2; i++) fprintf (debug_file, " ");
+  for (int i = 0; i < 2 * level + 2; i++) bprintf (debug_file, " ");
   if (root->bb != NULL) {
     gen_assert (DLIST_HEAD (loop_node_t, root->children) == NULL);
-    fprintf (debug_file, "BB%-3lu (pressure: int=%d, fp=%d)\n", (unsigned long) root->bb->index,
+    bprintf (debug_file, "BB%-3lu (pressure: int=%d, fp=%d)\n", (unsigned long) root->bb->index,
              root->max_int_pressure, root->max_fp_pressure);
     return;
   }
-  fprintf (debug_file, "Loop%3lu (pressure: int=%d, fp=%d)", (unsigned long) root->index,
+  bprintf (debug_file, "Loop%3lu (pressure: int=%d, fp=%d)", (unsigned long) root->index,
            root->max_int_pressure, root->max_fp_pressure);
   if (curr_cfg->root_loop_node == root)
-    fprintf (debug_file, ":\n");
+    bprintf (debug_file, ":\n");
   else
-    fprintf (debug_file, " (entry - bb%lu):\n", (unsigned long) root->entry->bb->index);
+    bprintf (debug_file, " (entry - bb%lu):\n", (unsigned long) root->entry->bb->index);
   for (loop_node_t node = DLIST_HEAD (loop_node_t, root->children); node != NULL;
        node = DLIST_NEXT (loop_node_t, node))
     print_loop_subtree (gen_ctx, node, level + 1, bb_p);
@@ -1206,7 +1206,7 @@ static void print_loop_subtree (gen_ctx_t gen_ctx, loop_node_t root, int level, 
 
 static void print_loop_tree (gen_ctx_t gen_ctx, int bb_p) {
   if (curr_cfg->root_loop_node == NULL) return;
-  fprintf (debug_file, "Loop Tree\n");
+  bprintf (debug_file, "Loop Tree\n");
   print_loop_subtree (gen_ctx, curr_cfg->root_loop_node, 0, bb_p);
 }
 
@@ -1234,7 +1234,7 @@ static void rename_op_reg (gen_ctx_t gen_ctx, MIR_op_t *op_ref, MIR_reg_t reg, M
   DEBUG (2, {
     MIR_func_t func = curr_func_item->u.func;
 
-    fprintf (debug_file, "    Change %s to %s in insn %-5lu", MIR_reg_name (ctx, reg, func),
+    bprintf (debug_file, "    Change %s to %s in insn %-5lu", MIR_reg_name (ctx, reg, func),
              MIR_reg_name (ctx, new_reg, func), (long unsigned) ((bb_insn_t) insn->data)->index);
     print_bb_insn (gen_ctx, insn->data, FALSE);
   });
@@ -1674,7 +1674,7 @@ static void minimize_ssa (gen_ctx_t gen_ctx, size_t insns_num) {
     VARR_TRUNC (bb_insn_t, phis, saved_bound);
   } while (change_p);
   DEBUG (2, {
-    fprintf (debug_file, "Minimizing SSA phis: from %ld to %ld phis (non-phi insns %ld)\n",
+    bprintf (debug_file, "Minimizing SSA phis: from %ld to %ld phis (non-phi insns %ld)\n",
              (long) VARR_LENGTH (bb_insn_t, deleted_phis) + (long) VARR_LENGTH (bb_insn_t, phis),
              (long) VARR_LENGTH (bb_insn_t, phis), (long) insns_num);
   });
@@ -1809,11 +1809,11 @@ static int push_to_rename (gen_ctx_t gen_ctx, ssa_edge_t ssa_edge) {
   VARR_PUSH (ssa_edge_t, ssa_edges_to_process, ssa_edge);
   ssa_edge->flag = TRUE;
   DEBUG (2, {
-    fprintf (debug_file, "     Adding ssa edge: def %lu:%d -> use %lu:%d:\n      ",
+    bprintf (debug_file, "     Adding ssa edge: def %lu:%d -> use %lu:%d:\n      ",
              (unsigned long) ssa_edge->def->index, ssa_edge->def_op_num,
              (unsigned long) ssa_edge->use->index, ssa_edge->use_op_num);
     print_bb_insn (gen_ctx, ssa_edge->def, FALSE);
-    fprintf (debug_file, "     ");
+    bprintf (debug_file, "     ");
     print_bb_insn (gen_ctx, ssa_edge->use, FALSE);
   });
   return TRUE;
@@ -1854,7 +1854,7 @@ static void rename_bb_insn (gen_ctx_t gen_ctx, bb_insn_t bb_insn) {
     ssa_edge = insn->ops[op_num].data;
     if (ssa_edge != NULL && ssa_edge->flag) continue; /* already processed */
     DEBUG (2, {
-      fprintf (debug_file, "  Start def insn %-5lu", (long unsigned) bb_insn->index);
+      bprintf (debug_file, "  Start def insn %-5lu", (long unsigned) bb_insn->index);
       print_bb_insn (gen_ctx, bb_insn, FALSE);
     });
     reg = var2reg (gen_ctx, var);
@@ -2079,7 +2079,7 @@ static void copy_prop (gen_ctx_t gen_ctx) {
               || bitmap_bit_p (temp_bitmap, def_insn->ops[1].u.reg))
             break;
           DEBUG (2, {
-            fprintf (debug_file, "  Removing copy insn %-5lu", (unsigned long) def->index);
+            bprintf (debug_file, "  Removing copy insn %-5lu", (unsigned long) def->index);
             MIR_output_insn (gen_ctx->ctx, debug_file, def_insn, curr_func_item->u.func, TRUE);
           });
           reg = var2reg (gen_ctx, var);
@@ -2102,19 +2102,19 @@ static void copy_prop (gen_ctx_t gen_ctx) {
         if (w2 != 0 && sign_p == sign2_p && w2 <= w
             && !bitmap_bit_p (temp_bitmap, def_insn->ops[1].u.reg)) {
           DEBUG (2, {
-            fprintf (debug_file, "    Change code of insn %lu: before",
+            bprintf (debug_file, "    Change code of insn %lu: before",
                      (unsigned long) bb_insn->index);
             MIR_output_insn (ctx, debug_file, insn, curr_func_item->u.func, FALSE);
           });
           insn->code = MIR_MOV;
           DEBUG (2, {
-            fprintf (debug_file, "    after");
+            bprintf (debug_file, "    after");
             MIR_output_insn (ctx, debug_file, insn, curr_func_item->u.func, TRUE);
           });
         }
       }
     }
-  DEBUG (1, { fprintf (debug_file, "%5ld deleted copy insns\n", deleted_insns_num); });
+  DEBUG (1, { bprintf (debug_file, "%5ld deleted copy insns\n", deleted_insns_num); });
 }
 
 /* New Page */
@@ -2275,14 +2275,14 @@ static void print_expr (gen_ctx_t gen_ctx, expr_t e, const char *title) {
   MIR_context_t ctx = gen_ctx->ctx;
   size_t nops;
 
-  fprintf (debug_file, "  %s %3lu: ", title, (unsigned long) e->num);
-  fprintf (debug_file, "%s _", MIR_insn_name (ctx, e->insn->code));
+  bprintf (debug_file, "  %s %3lu: ", title, (unsigned long) e->num);
+  bprintf (debug_file, "%s _", MIR_insn_name (ctx, e->insn->code));
   nops = MIR_insn_nops (ctx, e->insn);
   for (size_t j = 1; j < nops; j++) {
-    fprintf (debug_file, ", ");
+    bprintf (debug_file, ", ");
     MIR_output_op (ctx, debug_file, e->insn->ops[j], curr_func_item->u.func);
   }
-  fprintf (debug_file, "\n");
+  bprintf (debug_file, "\n");
 }
 #endif
 
@@ -2321,7 +2321,7 @@ static void gvn_modify (gen_ctx_t gen_ctx) {
       else
         bb_insn->gvn_val = e->num;
       DEBUG (2, {
-        fprintf (debug_file, "Val=%lu for insn %lu:", (unsigned long) bb_insn->gvn_val,
+        bprintf (debug_file, "Val=%lu for insn %lu:", (unsigned long) bb_insn->gvn_val,
                  (unsigned long) bb_insn->index);
         MIR_output_insn (ctx, debug_file, bb_insn->insn, curr_func_item->u.func, TRUE);
       });
@@ -2355,9 +2355,9 @@ static void gvn_modify (gen_ctx_t gen_ctx) {
         if (!find_expr (gen_ctx, new_insn, &new_e)) new_e = add_expr (gen_ctx, new_insn);
         new_bb_insn->gvn_val = e->num;
         DEBUG (2, {
-          fprintf (debug_file, "  adding insn ");
+          bprintf (debug_file, "  adding insn ");
           MIR_output_insn (ctx, debug_file, new_insn, curr_func_item->u.func, FALSE);
-          fprintf (debug_file, "  after def insn ");
+          bprintf (debug_file, "  after def insn ");
           MIR_output_insn (ctx, debug_file, e->insn, curr_func_item->u.func, TRUE);
         });
       }
@@ -2374,14 +2374,14 @@ static void gvn_modify (gen_ctx_t gen_ctx) {
       new_bb_insn->gvn_val = e->num;
       gvn_insns_num++;
       DEBUG (2, {
-        fprintf (debug_file, "  adding insn ");
+        bprintf (debug_file, "  adding insn ");
         MIR_output_insn (ctx, debug_file, new_insn, curr_func_item->u.func, FALSE);
-        fprintf (debug_file, "  after use insn ");
+        bprintf (debug_file, "  after use insn ");
         MIR_output_insn (ctx, debug_file, insn, curr_func_item->u.func, TRUE);
       });
     }
   }
-  DEBUG (1, { fprintf (debug_file, "%5ld found GVN redundant insns\n", gvn_insns_num); });
+  DEBUG (1, { bprintf (debug_file, "%5ld found GVN redundant insns\n", gvn_insns_num); });
 }
 
 static void gvn (gen_ctx_t gen_ctx) {
@@ -2970,7 +2970,7 @@ static void ccp_push_used_insns (gen_ctx_t gen_ctx, ssa_edge_t first_ssa_edge) {
       continue; /* already in ccp_insns or bb is not processed yet */
     VARR_PUSH (bb_insn_t, ccp_insns, bb_insn);
     DEBUG (2, {
-      fprintf (debug_file, "           pushing bb%lu insn: ", (unsigned long) bb_insn->bb->index);
+      bprintf (debug_file, "           pushing bb%lu insn: ", (unsigned long) bb_insn->bb->index);
       MIR_output_insn (ctx, debug_file, bb_insn->insn, curr_func_item->u.func, FALSE);
     });
     bb_insn->flag = TRUE;
@@ -2980,7 +2980,7 @@ static void ccp_push_used_insns (gen_ctx_t gen_ctx, ssa_edge_t first_ssa_edge) {
 static void ccp_process_active_edge (gen_ctx_t gen_ctx, edge_t e) {
   if (e->skipped_p && !e->dst->flag) {
     DEBUG (2, {
-      fprintf (debug_file, "         Make edge bb%lu->bb%lu active\n",
+      bprintf (debug_file, "         Make edge bb%lu->bb%lu active\n",
                (unsigned long) e->src->index, (unsigned long) e->dst->index);
     });
     e->dst->flag = TRUE; /* just activated edge whose dest is not in ccp_bbs */
@@ -2996,20 +2996,20 @@ static void ccp_make_insn_update (gen_ctx_t gen_ctx, MIR_insn_t insn) {
   if (!ccp_insn_update (gen_ctx, insn)) {
     DEBUG (2, {
       if (MIR_call_code_p (insn->code)) {
-        fprintf (debug_file, " -- keep all results varying");
+        bprintf (debug_file, " -- keep all results varying");
       } else if (get_ccp_res_op (gen_ctx, insn, 0, &op) && var_insn_op_p (insn, 0)) {
         ccp_val = get_ccp_val (gen_ctx, insn->data);
         if (ccp_val->val_kind == CCP_UNKNOWN) {
-          fprintf (debug_file, " -- make the result unknown");
+          bprintf (debug_file, " -- make the result unknown");
         } else if (ccp_val->val_kind == CCP_VARYING) {
-          fprintf (debug_file, " -- keep the result varying");
+          bprintf (debug_file, " -- keep the result varying");
         } else {
           gen_assert (ccp_val->val_kind == CCP_CONST);
-          fprintf (debug_file, " -- keep the result a constant ");
+          bprintf (debug_file, " -- keep the result a constant ");
           print_const (debug_file, ccp_val->val);
         }
       }
-      fprintf (debug_file, "\n");
+      bprintf (debug_file, "\n");
     });
   } else {
     ccp_val = NULL; /* to remove an initilized warning */
@@ -3020,14 +3020,14 @@ static void ccp_make_insn_update (gen_ctx_t gen_ctx, MIR_insn_t insn) {
     gen_assert (ccp_val != NULL);
     DEBUG (2, {
       if (MIR_call_code_p (insn->code)) {
-        fprintf (debug_file, " -- make all results varying\n");
+        bprintf (debug_file, " -- make all results varying\n");
       } else if (ccp_val->val_kind == CCP_VARYING) {
-        fprintf (debug_file, " -- make the result varying\n");
+        bprintf (debug_file, " -- make the result varying\n");
       } else {
         gen_assert (ccp_val->val_kind == CCP_CONST);
-        fprintf (debug_file, " -- make the result a constant ");
+        bprintf (debug_file, " -- make the result a constant ");
         print_const (debug_file, ccp_val->val);
-        fprintf (debug_file, "\n");
+        bprintf (debug_file, "\n");
       }
     });
   }
@@ -3041,14 +3041,14 @@ static void ccp_process_insn (gen_ctx_t gen_ctx, bb_insn_t bb_insn) {
   MIR_insn_t insn = bb_insn->insn;
 
   DEBUG (2, {
-    fprintf (debug_file, "       processing bb%lu insn: ", (unsigned long) bb_insn->bb->index);
+    bprintf (debug_file, "       processing bb%lu insn: ", (unsigned long) bb_insn->bb->index);
     MIR_output_insn (gen_ctx->ctx, debug_file, bb_insn->insn, curr_func_item->u.func, FALSE);
   });
   if (!MIR_branch_code_p (insn->code) || insn->code == MIR_JMP || insn->code == MIR_SWITCH) {
     ccp_make_insn_update (gen_ctx, insn);  // ??? should we process SWITCH as cond branch
     return;
   }
-  DEBUG (2, { fprintf (debug_file, "\n"); });
+  DEBUG (2, { bprintf (debug_file, "\n"); });
   if ((ccp_res = ccp_branch_update (gen_ctx, insn, &res)) == CCP_CONST) {
     /* Remember about an edge to exit bb.  First edge is always for
        fall through and the 2nd edge is for jump bb. */
@@ -3066,14 +3066,14 @@ static void ccp_process_bb (gen_ctx_t gen_ctx, bb_t bb) {
   bb_insn_t bb_insn;
   edge_t e;
 
-  DEBUG (2, { fprintf (debug_file, "       processing bb%lu\n", (unsigned long) bb->index); });
+  DEBUG (2, { bprintf (debug_file, "       processing bb%lu\n", (unsigned long) bb->index); });
   for (bb_insn = DLIST_HEAD (bb_insn_t, bb->bb_insns); bb_insn != NULL;
        bb_insn = DLIST_NEXT (bb_insn_t, bb_insn)) {
     if ((insn = bb_insn->insn)->code == MIR_LABEL) continue;
     if (insn->code != MIR_PHI) break;
     DEBUG (2, {
       gen_assert (insn->ops[0].mode == MIR_OP_REG);
-      fprintf (debug_file,
+      bprintf (debug_file,
                "       processing phi of reg%lu(%s) in bb%lu:", (long unsigned) insn->ops[0].u.reg,
                MIR_reg_name (gen_ctx->ctx, insn->ops[0].u.reg, curr_func_item->u.func),
                (unsigned long) bb->index);
@@ -3147,7 +3147,7 @@ static int ccp_modify (gen_ctx_t gen_ctx) {
     if (!bb->flag) {
       change_p = TRUE;
       DEBUG (2, {
-        fprintf (debug_file, "  deleting unreachable bb%lu and its edges\n",
+        bprintf (debug_file, "  deleting unreachable bb%lu and its edges\n",
                  (unsigned long) bb->index);
       });
       for (bb_insn = DLIST_HEAD (bb_insn_t, bb->bb_insns); bb_insn != NULL;
@@ -3171,7 +3171,7 @@ static int ccp_modify (gen_ctx_t gen_ctx) {
         gen_assert (!MIR_call_code_p (bb_insn->insn->code));
         change_p = TRUE;
         DEBUG (2, {
-          fprintf (debug_file, "  changing insn ");
+          bprintf (debug_file, "  changing insn ");
           MIR_output_insn (gen_ctx->ctx, debug_file, bb_insn->insn, curr_func_item->u.func, FALSE);
         });
         op = val.uns_p ? MIR_new_uint_op (ctx, val.u.u) : MIR_new_int_op (ctx, val.u.i);
@@ -3196,7 +3196,7 @@ static int ccp_modify (gen_ctx_t gen_ctx) {
         insn->data = bb_insn;
         bb_insn->insn = insn;
         DEBUG (2, {
-          fprintf (debug_file, "    on insn ");
+          bprintf (debug_file, "    on insn ");
           MIR_output_insn (ctx, debug_file, insn, curr_func_item->u.func, TRUE);
         });
       }
@@ -3207,9 +3207,9 @@ static int ccp_modify (gen_ctx_t gen_ctx) {
     if (first_insn->code == MIR_LABEL && (prev_insn = DLIST_PREV (MIR_insn_t, first_insn)) != NULL
         && prev_insn->code == MIR_JMP && prev_insn->ops[0].u.label == first_insn) {
       DEBUG (2, {
-        fprintf (debug_file, "  removing useless jump insn ");
+        bprintf (debug_file, "  removing useless jump insn ");
         MIR_output_insn (ctx, debug_file, prev_insn, curr_func_item->u.func, TRUE);
-        fprintf (debug_file, "\n");
+        bprintf (debug_file, "\n");
       });
       ccp_remove_insn_ssa_edges (gen_ctx, prev_insn);
       gen_delete_insn (gen_ctx, prev_insn);
@@ -3223,9 +3223,9 @@ static int ccp_modify (gen_ctx_t gen_ctx) {
       edge_t e;
 
       DEBUG (2, {
-        fprintf (debug_file, "  removing branch insn ");
+        bprintf (debug_file, "  removing branch insn ");
         MIR_output_insn (ctx, debug_file, insn, curr_func_item->u.func, TRUE);
-        fprintf (debug_file, "\n");
+        bprintf (debug_file, "\n");
       });
       ccp_remove_insn_ssa_edges (gen_ctx, insn);
       gen_delete_insn (gen_ctx, insn);
@@ -3235,11 +3235,11 @@ static int ccp_modify (gen_ctx_t gen_ctx) {
     } else {
       insn = MIR_new_insn (ctx, MIR_JMP, insn->ops[0]); /* label is always 0-th op */
       DEBUG (2, {
-        fprintf (debug_file, "  changing branch insn ");
+        bprintf (debug_file, "  changing branch insn ");
         MIR_output_insn (ctx, debug_file, bb_insn->insn, curr_func_item->u.func, FALSE);
-        fprintf (debug_file, " onto jump insn ");
+        bprintf (debug_file, " onto jump insn ");
         MIR_output_insn (ctx, debug_file, insn, curr_func_item->u.func, TRUE);
-        fprintf (debug_file, "\n");
+        bprintf (debug_file, "\n");
       });
       MIR_insert_insn_before (ctx, curr_func_item, bb_insn->insn, insn);
       ccp_remove_insn_ssa_edges (gen_ctx, bb_insn->insn);
@@ -3250,14 +3250,14 @@ static int ccp_modify (gen_ctx_t gen_ctx) {
     }
   }
   DEBUG (1, {
-    fprintf (debug_file, "%5ld deleted CCP insns + %ld deleted branches\n", deleted_insns_num,
+    bprintf (debug_file, "%5ld deleted CCP insns + %ld deleted branches\n", deleted_insns_num,
              deleted_branches_num);
   });
   return change_p;
 }
 
 static int ccp (gen_ctx_t gen_ctx) { /* conditional constant propagation */
-  DEBUG (2, { fprintf (debug_file, "  CCP analysis:\n"); });
+  DEBUG (2, { bprintf (debug_file, "  CCP analysis:\n"); });
   curr_ccp_run++;
   bb_visited = temp_bitmap;
   initiate_ccp_info (gen_ctx);
@@ -3276,7 +3276,7 @@ static int ccp (gen_ctx_t gen_ctx) { /* conditional constant propagation */
       ccp_process_insn (gen_ctx, bb_insn);
     }
   }
-  DEBUG (2, { fprintf (debug_file, "  CCP modification:\n"); });
+  DEBUG (2, { bprintf (debug_file, "  CCP modification:\n"); });
   return ccp_modify (gen_ctx);
 }
 
@@ -3426,7 +3426,7 @@ static MIR_insn_t initiate_bb_live_info (gen_ctx_t gen_ctx, MIR_insn_t bb_tail_i
         DLIST_APPEND (src_mv_t, breg_infos[reg2breg (gen_ctx, insn->ops[1].u.reg)].src_moves, mv);
       (*mvs_num)++;
       DEBUG (2, {
-        fprintf (debug_file, "  move with freq %10lu:", (unsigned long) mv->freq);
+        bprintf (debug_file, "  move with freq %10lu:", (unsigned long) mv->freq);
         MIR_output_insn (gen_ctx->ctx, debug_file, insn, curr_func_item->u.func, TRUE);
       });
     }
@@ -3598,18 +3598,18 @@ static void print_live_ranges (gen_ctx_t gen_ctx) {
   MIR_context_t ctx = gen_ctx->ctx;
   live_range_t lr;
 
-  fprintf (debug_file, "+++++++++++++Live ranges:\n");
+  bprintf (debug_file, "+++++++++++++Live ranges:\n");
   gen_assert (get_nvars (gen_ctx) == VARR_LENGTH (live_range_t, var_live_ranges));
   for (size_t i = 0; i < VARR_LENGTH (live_range_t, var_live_ranges); i++) {
     if ((lr = VARR_GET (live_range_t, var_live_ranges, i)) == NULL) continue;
-    fprintf (debug_file, "%lu", (unsigned long) i);
+    bprintf (debug_file, "%lu", (unsigned long) i);
     if (var_is_reg_p (i))
-      fprintf (debug_file, " (%s:%s)",
+      bprintf (debug_file, " (%s:%s)",
                MIR_type_str (ctx, MIR_reg_type (ctx, var2reg (gen_ctx, i), curr_func_item->u.func)),
                MIR_reg_name (ctx, var2reg (gen_ctx, i), curr_func_item->u.func));
-    fprintf (debug_file, ":");
-    for (; lr != NULL; lr = lr->next) fprintf (debug_file, " [%d..%d]", lr->start, lr->finish);
-    fprintf (debug_file, "\n");
+    bprintf (debug_file, ":");
+    for (; lr != NULL; lr = lr->next) bprintf (debug_file, " [%d..%d]", lr->start, lr->finish);
+    bprintf (debug_file, "\n");
   }
 }
 #endif
@@ -3650,7 +3650,7 @@ static void shrink_live_ranges (gen_ctx_t gen_ctx) {
 
   n++;
   DEBUG (2, {
-    fprintf (debug_file, "Compressing live ranges: from %d to %ld - %ld%%\n", curr_point, n,
+    bprintf (debug_file, "Compressing live ranges: from %d to %ld - %ld%%\n", curr_point, n,
              curr_point == 0 ? 100 : 100 * n / curr_point);
   });
   curr_point = n;
@@ -3671,7 +3671,7 @@ static void shrink_live_ranges (gen_ctx_t gen_ctx) {
     }
   }
   DEBUG (2, {
-    fprintf (debug_file, "Ranges after the compression:\n");
+    bprintf (debug_file, "Ranges after the compression:\n");
     print_live_ranges (gen_ctx);
   });
 }
@@ -3690,7 +3690,7 @@ static void build_live_ranges (gen_ctx_t gen_ctx) {
   for (i = 0; i < nvars; i++) VARR_PUSH (live_range_t, var_live_ranges, NULL);
   for (bb_t bb = DLIST_HEAD (bb_t, curr_cfg->bbs); bb != NULL; bb = DLIST_NEXT (bb_t, bb)) {
     DEBUG (2, {
-      fprintf (debug_file, "  ------BB%u end: point=%d\n", (unsigned) bb->index, curr_point);
+      bprintf (debug_file, "  ------BB%u end: point=%d\n", (unsigned) bb->index, curr_point);
     });
     bitmap_clear (live_vars);
     if (bb->live_out != NULL) FOREACH_BITMAP_BIT (bi, bb->live_out, nel) {
@@ -3700,7 +3700,7 @@ static void build_live_ranges (gen_ctx_t gen_ctx) {
          bb_insn = DLIST_PREV (bb_insn_t, bb_insn)) {
       insn = bb_insn->insn;
       DEBUG (2, {
-        fprintf (debug_file, "  p%-5d", curr_point);
+        bprintf (debug_file, "  p%-5d", curr_point);
         print_bb_insn (gen_ctx, bb_insn, TRUE);
       });
       incr_p = FALSE;
@@ -3915,7 +3915,7 @@ static void fast_assign (gen_ctx_t gen_ctx) {
       }
     }
     DEBUG (2, {
-      fprintf (debug_file, " Assigning to %s:var=%3u, breg=%3u -- %lu\n",
+      bprintf (debug_file, " Assigning to %s:var=%3u, breg=%3u -- %lu\n",
                MIR_reg_name (gen_ctx->ctx, reg, curr_func_item->u.func), reg2var (gen_ctx, reg),
                breg, (unsigned long) best_loc);
     });
@@ -4130,7 +4130,7 @@ static void quality_assign (gen_ctx_t gen_ctx) {
     DEBUG (2, {
       MIR_reg_t thread_breg = curr_breg_infos[breg].thread_first;
 
-      fprintf (debug_file,
+      bprintf (debug_file,
                " Assigning to %s:var=%3u, breg=%3u (freq %-3ld), thread breg=%3u (freq %-3ld) "
                "-- "
                "%lu\n",
@@ -4155,14 +4155,14 @@ static void assign (gen_ctx_t gen_ctx) {
   else
     quality_assign (gen_ctx);
   DEBUG (2, {
-    fprintf (debug_file, "+++++++++++++Disposition after assignment:");
+    bprintf (debug_file, "+++++++++++++Disposition after assignment:");
     for (i = 0; i < nregs; i++) {
-      if (i % 8 == 0) fprintf (debug_file, "\n");
+      if (i % 8 == 0) bprintf (debug_file, "\n");
       reg = breg2reg (gen_ctx, i);
-      fprintf (debug_file, " %3u=>%-2u", reg2var (gen_ctx, reg),
+      bprintf (debug_file, " %3u=>%-2u", reg2var (gen_ctx, reg),
                VARR_GET (MIR_reg_t, breg_renumber, i));
     }
-    fprintf (debug_file, "\n");
+    bprintf (debug_file, "\n");
   });
 }
 
@@ -4315,9 +4315,9 @@ static void rewrite (gen_ctx_t gen_ctx) {
       movs_num++;
       if (MIR_op_eq_p (ctx, insn->ops[0], insn->ops[1])) {
         DEBUG (2, {
-          fprintf (debug_file, "Deleting noop move ");
+          bprintf (debug_file, "Deleting noop move ");
           MIR_output_insn (ctx, debug_file, insn, curr_func_item->u.func, FALSE);
-          fprintf (debug_file, " which was ");
+          bprintf (debug_file, " which was ");
           insn->ops[0] = out_op;
           insn->ops[1] = in_op;
           MIR_output_insn (ctx, debug_file, insn, curr_func_item->u.func, TRUE);
@@ -4328,7 +4328,7 @@ static void rewrite (gen_ctx_t gen_ctx) {
     }
   }
   DEBUG (1, {
-    fprintf (debug_file,
+    bprintf (debug_file,
              "%5lu deleted RA noop moves out of %lu non-conflicting moves "
              "(%.1f%%), "
              "out of %lu all moves (%.1f%%), out of %lu all insns (%.1f%%)\n",
@@ -4533,7 +4533,7 @@ static int combine_delete_insn (gen_ctx_t gen_ctx, MIR_insn_t def_insn, bb_insn_
   hr = def_insn->ops[0].u.hard_reg;
   if (hreg_ref_ages_addr[hr] != curr_bb_hreg_ref_age || hreg_refs_addr[hr].del_p) return FALSE;
   DEBUG (2, {
-    fprintf (debug_file, "      deleting now dead insn ");
+    bprintf (debug_file, "      deleting now dead insn ");
     print_bb_insn (gen_ctx, def_insn->data, TRUE);
   });
   remove_bb_insn_dead_var (gen_ctx, bb_insn, hr);
@@ -4621,16 +4621,16 @@ static int combine_substitute (gen_ctx_t gen_ctx, bb_insn_t *bb_insn_ref, long *
       if (!success_p) return FALSE;
       gen_move_insn_before (gen_ctx, insn, def_insn);
       DEBUG (2, {
-        fprintf (debug_file, "      moving insn ");
+        bprintf (debug_file, "      moving insn ");
         print_bb_insn (gen_ctx, def_insn->data, FALSE);
-        fprintf (debug_file, "      before insn ");
+        bprintf (debug_file, "      before insn ");
         print_bb_insn (gen_ctx, bb_insn, TRUE);
       });
       def_insn->ops[0] = insn->ops[0];
       DEBUG (2, {
-        fprintf (debug_file, "      changing it to ");
+        bprintf (debug_file, "      changing it to ");
         print_bb_insn (gen_ctx, def_insn->data, TRUE);
-        fprintf (debug_file, "      deleting insn ");
+        bprintf (debug_file, "      deleting insn ");
         print_bb_insn (gen_ctx, bb_insn, TRUE);
       });
       gen_delete_insn (gen_ctx, insn);
@@ -4749,7 +4749,7 @@ static int combine_substitute (gen_ctx_t gen_ctx, bb_insn_t *bb_insn_ref, long *
         gen_assert (def_insn != NULL);
         if (combine_delete_insn (gen_ctx, def_insn, bb_insn)) (*deleted_insns_num)++;
         DEBUG (2, {
-          fprintf (debug_file, "      changing to ");
+          bprintf (debug_file, "      changing to ");
           print_bb_insn (gen_ctx, bb_insn, TRUE);
         });
       }
@@ -4832,7 +4832,7 @@ static MIR_insn_t combine_branch_and_cmp (gen_ctx_t gen_ctx, bb_insn_t bb_insn,
     new_insn->data = bb_insn;
     bb_insn->insn = new_insn;
     DEBUG (2, {
-      fprintf (debug_file, "      changing to ");
+      bprintf (debug_file, "      changing to ");
       print_bb_insn (gen_ctx, bb_insn, TRUE);
     });
     if (combine_delete_insn (gen_ctx, def_insn, bb_insn)) (*deleted_insns_num)++;
@@ -4879,7 +4879,7 @@ static MIR_insn_t combine_exts (gen_ctx_t gen_ctx, bb_insn_t bb_insn, long *dele
       return NULL;
     }
     DEBUG (2, {
-      fprintf (debug_file, "      changing to ");
+      bprintf (debug_file, "      changing to ");
       print_bb_insn (gen_ctx, bb_insn, TRUE);
     });
     if (combine_delete_insn (gen_ctx, def_insn, bb_insn)) (*deleted_insns_num)++;
@@ -4892,16 +4892,16 @@ static MIR_insn_t combine_exts (gen_ctx_t gen_ctx, bb_insn_t bb_insn, long *dele
     if (!ok_p) return NULL;
     gen_move_insn_before (gen_ctx, insn, def_insn);
     DEBUG (2, {
-      fprintf (debug_file, "      moving insn ");
+      bprintf (debug_file, "      moving insn ");
       print_bb_insn (gen_ctx, def_insn->data, FALSE);
-      fprintf (debug_file, "      before insn ");
+      bprintf (debug_file, "      before insn ");
       print_bb_insn (gen_ctx, bb_insn, TRUE);
     });
     def_insn->ops[0] = insn->ops[0];
     DEBUG (2, {
-      fprintf (debug_file, "      changing it to ");
+      bprintf (debug_file, "      changing it to ");
       print_bb_insn (gen_ctx, def_insn->data, TRUE);
-      fprintf (debug_file, "      deleting insn ");
+      bprintf (debug_file, "      deleting insn ");
       print_bb_insn (gen_ctx, bb_insn, TRUE);
     });
     gen_delete_insn (gen_ctx, insn);
@@ -4941,13 +4941,13 @@ static MIR_insn_t combine_mul_div_substitute (gen_ctx_t gen_ctx, bb_insn_t bb_in
     gen_add_insn_before (gen_ctx, insn, new_insns[0]);
     move_bb_insn_dead_vars (new_insns[0]->data, bb_insn);
     DEBUG (2, {
-      fprintf (debug_file, "      changing to ");
+      bprintf (debug_file, "      changing to ");
       print_bb_insn (gen_ctx, new_insns[0]->data, TRUE);
     });
     gen_delete_insn (gen_ctx, insn);
     if (def_insn != NULL) {
       DEBUG (2, {
-        fprintf (debug_file, "      deleting now dead insn ");
+        bprintf (debug_file, "      deleting now dead insn ");
         print_bb_insn (gen_ctx, def_insn->data, TRUE);
       });
       gen_delete_insn (gen_ctx, def_insn);
@@ -4962,7 +4962,7 @@ static MIR_insn_t combine_mul_div_substitute (gen_ctx_t gen_ctx, bb_insn_t bb_in
       insn->code = new_insns[0]->code;
       insn->ops[2] = new_insns[0]->ops[2];
       DEBUG (2, {
-        fprintf (debug_file, "      changing to ");
+        bprintf (debug_file, "      changing to ");
         print_bb_insn (gen_ctx, bb_insn, TRUE);
       });
     }
@@ -4997,9 +4997,9 @@ static MIR_insn_t combine_mul_div_substitute (gen_ctx_t gen_ctx, bb_insn_t bb_in
       move_bb_insn_dead_vars (new_insns[3]->data, bb_insn);
       add_bb_insn_dead_var (gen_ctx, new_insns[5]->data, TEMP_INT_HARD_REG2);
       DEBUG (2, {
-        fprintf (debug_file, "      changing to ");
+        bprintf (debug_file, "      changing to ");
         for (n = 0; n < 6; n++) {
-          if (n != 0) fprintf (debug_file, "                  ");
+          if (n != 0) bprintf (debug_file, "                  ");
           print_bb_insn (gen_ctx, new_insns[n]->data, TRUE);
         }
       });
@@ -5007,7 +5007,7 @@ static MIR_insn_t combine_mul_div_substitute (gen_ctx_t gen_ctx, bb_insn_t bb_in
       *deleted_insns_num -= 5;
       if (def_insn != NULL) {
         DEBUG (2, {
-          fprintf (debug_file, "      deleting now dead insn ");
+          bprintf (debug_file, "      deleting now dead insn ");
           print_bb_insn (gen_ctx, def_insn->data, TRUE);
         });
         gen_delete_insn (gen_ctx, def_insn);
@@ -5045,7 +5045,7 @@ static void combine (gen_ctx_t gen_ctx) {
   hreg_ref_ages_addr = VARR_ADDR (size_t, hreg_ref_ages);
   for (bb_t bb = DLIST_HEAD (bb_t, curr_cfg->bbs); bb != NULL; bb = DLIST_NEXT (bb_t, bb)) {
     do {
-      DEBUG (2, { fprintf (debug_file, "Processing bb%lu\n", (unsigned long) bb->index); });
+      DEBUG (2, { bprintf (debug_file, "Processing bb%lu\n", (unsigned long) bb->index); });
       block_change_p = FALSE;
       curr_bb_hreg_ref_age++;
       last_mem_ref_insn_num = 0; /* means undef */
@@ -5055,7 +5055,7 @@ static void combine (gen_ctx_t gen_ctx) {
         nops = MIR_insn_nops (ctx, insn);
         if (insn->code != MIR_LABEL) insns_num++;
         DEBUG (2, {
-          fprintf (debug_file, "  Processing ");
+          bprintf (debug_file, "  Processing ");
           print_bb_insn (gen_ctx, bb_insn, TRUE);
         });
         target_get_early_clobbered_hard_regs (insn, &early_clobbered_hard_reg1,
@@ -5133,7 +5133,7 @@ static void combine (gen_ctx_t gen_ctx) {
     } while (block_change_p);
   }
   DEBUG (1, {
-    fprintf (debug_file, "%5ld deleted combine insns out of %ld (%.1f%%)\n", deleted_insns_num,
+    bprintf (debug_file, "%5ld deleted combine insns out of %ld (%.1f%%)\n", deleted_insns_num,
              insns_num, 100.0 * deleted_insns_num / insns_num);
   });
 }
@@ -5182,7 +5182,7 @@ static void dead_code_elimination (gen_ctx_t gen_ctx) {
   insn_var_iterator_t insn_var_iter;
   long dead_insns_num = 0;
 
-  DEBUG (2, { fprintf (debug_file, "+++++++++++++Dead code elimination:\n"); });
+  DEBUG (2, { bprintf (debug_file, "+++++++++++++Dead code elimination:\n"); });
   live = bitmap_create2 (DEFAULT_INIT_BITMAP_BITS_NUM);
   for (bb_t bb = DLIST_HEAD (bb_t, curr_cfg->bbs); bb != NULL; bb = DLIST_NEXT (bb_t, bb)) {
     bitmap_copy (live, bb->live_out);
@@ -5204,7 +5204,7 @@ static void dead_code_elimination (gen_ctx_t gen_ctx) {
                && (insn->ops[0].u.hard_reg == FP_HARD_REG
                    || insn->ops[0].u.hard_reg == SP_HARD_REG))) {
         DEBUG (2, {
-          fprintf (debug_file, "  Removing dead insn %-5lu", (unsigned long) bb_insn->index);
+          bprintf (debug_file, "  Removing dead insn %-5lu", (unsigned long) bb_insn->index);
           MIR_output_insn (gen_ctx->ctx, debug_file, insn, curr_func_item->u.func, TRUE);
         });
         gen_delete_insn (gen_ctx, insn);
@@ -5226,7 +5226,7 @@ static void dead_code_elimination (gen_ctx_t gen_ctx) {
     }
   }
   bitmap_destroy (live);
-  DEBUG (1, { fprintf (debug_file, "%5ld removed dead insns\n", dead_insns_num); });
+  DEBUG (1, { bprintf (debug_file, "%5ld removed dead insns\n", dead_insns_num); });
 }
 
 #undef live_out
@@ -5268,7 +5268,7 @@ static void ssa_dead_code_elimination (gen_ctx_t gen_ctx) {
   ssa_edge_t ssa_edge;
   long dead_insns_num = 0;
 
-  DEBUG (2, { fprintf (debug_file, "+++++++++++++Dead code elimination:\n"); });
+  DEBUG (2, { bprintf (debug_file, "+++++++++++++Dead code elimination:\n"); });
   gen_assert (def_use_repr_p);
   VARR_TRUNC (bb_insn_t, dead_bb_insns, 0);
   for (bb_t bb = DLIST_HEAD (bb_t, curr_cfg->bbs); bb != NULL; bb = DLIST_NEXT (bb_t, bb))
@@ -5279,7 +5279,7 @@ static void ssa_dead_code_elimination (gen_ctx_t gen_ctx) {
     bb_insn = VARR_POP (bb_insn_t, dead_bb_insns);
     insn = bb_insn->insn;
     DEBUG (2, {
-      fprintf (debug_file, "  Removing dead insn %-5lu", (unsigned long) bb_insn->index);
+      bprintf (debug_file, "  Removing dead insn %-5lu", (unsigned long) bb_insn->index);
       MIR_output_insn (gen_ctx->ctx, debug_file, insn, curr_func_item->u.func, TRUE);
     });
     FOREACH_INSN_VAR (gen_ctx, iter, insn, var, op_num, out_p, mem_p, passed_mem_num) {
@@ -5292,7 +5292,7 @@ static void ssa_dead_code_elimination (gen_ctx_t gen_ctx) {
     gen_delete_insn (gen_ctx, insn);
     dead_insns_num++;
   }
-  DEBUG (1, { fprintf (debug_file, "%5ld removed SSA dead insns\n", dead_insns_num); });
+  DEBUG (1, { bprintf (debug_file, "%5ld removed SSA dead insns\n", dead_insns_num); });
 }
 
 /* New Page */
@@ -5304,7 +5304,7 @@ static void ssa_dead_code_elimination (gen_ctx_t gen_ctx) {
 #if MIR_GEN_CALL_TRACE
 static void *print_and_execute_wrapper (gen_ctx_t gen_ctx, MIR_item_t called_func) {
   gen_assert (called_func->item_type == MIR_func_item);
-  fprintf (stderr, "Calling %s\n", called_func->u.func->name);
+  bprintf (stderr, "Calling %s\n", called_func->u.func->name);
   return called_func->u.func->machine_code;
 }
 #endif
@@ -5331,16 +5331,16 @@ void *MIR_gen (MIR_context_t ctx, int gen_num, MIR_item_t func_item) {
     gen_assert (func_item->u.func->call_addr != NULL);
     _MIR_redirect_thunk (ctx, func_item->addr, func_item->u.func->call_addr);
     DEBUG (2, {
-      fprintf (debug_file, "+++++++++++++The code for %s has been already generated\n",
+      bprintf (debug_file, "+++++++++++++The code for %s has been already generated\n",
                MIR_item_name (ctx, func_item));
     });
     return func_item->addr;
   }
   DEBUG (0, {
-    fprintf (debug_file, "Code generation of function %s:\n", MIR_item_name (ctx, func_item));
+    bprintf (debug_file, "Code generation of function %s:\n", MIR_item_name (ctx, func_item));
   });
   DEBUG (2, {
-    fprintf (debug_file, "+++++++++++++MIR before generator:\n");
+    bprintf (debug_file, "+++++++++++++MIR before generator:\n");
     MIR_output_item (ctx, debug_file, func_item);
   });
   curr_func_item = func_item;
@@ -5348,35 +5348,35 @@ void *MIR_gen (MIR_context_t ctx, int gen_num, MIR_item_t func_item) {
   curr_cfg = func_item->data = gen_malloc (gen_ctx, sizeof (struct func_cfg));
   build_func_cfg (gen_ctx);
   DEBUG (2, {
-    fprintf (debug_file, "+++++++++++++MIR after building CFG:\n");
+    bprintf (debug_file, "+++++++++++++MIR after building CFG:\n");
     print_CFG (gen_ctx, TRUE, FALSE, TRUE, FALSE, NULL);
   });
   if (optimize_level >= 2) {
     build_ssa (gen_ctx);
     DEBUG (2, {
-      fprintf (debug_file, "+++++++++++++MIR after building SSA:\n");
+      bprintf (debug_file, "+++++++++++++MIR after building SSA:\n");
       print_varr_insns (gen_ctx, "undef init", undef_insns);
       print_varr_insns (gen_ctx, "arg init", arg_bb_insns);
-      fprintf (debug_file, "\n");
+      bprintf (debug_file, "\n");
       print_CFG (gen_ctx, TRUE, FALSE, TRUE, TRUE, NULL);
     });
   }
 #ifndef NO_COPY_PROP
   if (optimize_level >= 2) {
-    DEBUG (2, { fprintf (debug_file, "+++++++++++++Copy Propagation:\n"); });
+    DEBUG (2, { bprintf (debug_file, "+++++++++++++Copy Propagation:\n"); });
     copy_prop (gen_ctx);
     DEBUG (2, {
-      fprintf (debug_file, "+++++++++++++MIR after Copy Propagation:\n");
+      bprintf (debug_file, "+++++++++++++MIR after Copy Propagation:\n");
       print_CFG (gen_ctx, TRUE, FALSE, TRUE, TRUE, NULL);
     });
   }
 #endif /* #ifndef NO_COPY_PROP */
 #ifndef NO_GVN
   if (optimize_level >= 2) {
-    DEBUG (2, { fprintf (debug_file, "+++++++++++++GVN:\n"); });
+    DEBUG (2, { bprintf (debug_file, "+++++++++++++GVN:\n"); });
     gvn (gen_ctx);
     DEBUG (2, {
-      fprintf (debug_file, "+++++++++++++MIR after GVN:\n");
+      bprintf (debug_file, "+++++++++++++MIR after GVN:\n");
       print_CFG (gen_ctx, TRUE, FALSE, TRUE, TRUE, NULL);
     });
     gvn_clear (gen_ctx);
@@ -5386,22 +5386,22 @@ void *MIR_gen (MIR_context_t ctx, int gen_num, MIR_item_t func_item) {
   if (optimize_level >= 2) {
     ssa_dead_code_elimination (gen_ctx);
     DEBUG (2, {
-      fprintf (debug_file, "+++++++++++++MIR after dead code elimination after GVN:\n");
+      bprintf (debug_file, "+++++++++++++MIR after dead code elimination after GVN:\n");
       print_CFG (gen_ctx, TRUE, TRUE, TRUE, TRUE, NULL);
     });
   }
 #endif /* #ifndef NO_GVN */
 #ifndef NO_CCP
   if (optimize_level >= 2) {
-    DEBUG (2, { fprintf (debug_file, "+++++++++++++CCP:\n"); });
+    DEBUG (2, { bprintf (debug_file, "+++++++++++++CCP:\n"); });
     if (ccp (gen_ctx)) {
       DEBUG (2, {
-        fprintf (debug_file, "+++++++++++++MIR after CCP:\n");
+        bprintf (debug_file, "+++++++++++++MIR after CCP:\n");
         print_CFG (gen_ctx, TRUE, FALSE, TRUE, TRUE, NULL);
       });
       ssa_dead_code_elimination (gen_ctx);
       DEBUG (2, {
-        fprintf (debug_file, "+++++++++++++MIR after dead code elimination after CCP:\n");
+        bprintf (debug_file, "+++++++++++++MIR after dead code elimination after CCP:\n");
         print_CFG (gen_ctx, TRUE, TRUE, TRUE, TRUE, NULL);
       });
     }
@@ -5411,14 +5411,14 @@ void *MIR_gen (MIR_context_t ctx, int gen_num, MIR_item_t func_item) {
   make_io_dup_op_insns (gen_ctx);
   target_machinize (gen_ctx);
   DEBUG (2, {
-    fprintf (debug_file, "+++++++++++++MIR after machinize:\n");
+    bprintf (debug_file, "+++++++++++++MIR after machinize:\n");
     print_CFG (gen_ctx, FALSE, FALSE, TRUE, TRUE, NULL);
   });
   if (optimize_level != 0) build_loop_tree (gen_ctx);
   calculate_func_cfg_live_info (gen_ctx, optimize_level != 0);
   DEBUG (2, {
     add_bb_insn_dead_vars (gen_ctx);
-    fprintf (debug_file, "+++++++++++++MIR after building live_info:\n");
+    bprintf (debug_file, "+++++++++++++MIR after building live_info:\n");
     print_loop_tree (gen_ctx, TRUE);
     print_CFG (gen_ctx, TRUE, TRUE, FALSE, FALSE, output_bb_live_info);
   });
@@ -5426,7 +5426,7 @@ void *MIR_gen (MIR_context_t ctx, int gen_num, MIR_item_t func_item) {
   assign (gen_ctx);
   rewrite (gen_ctx); /* After rewrite the BB live info is still valid */
   DEBUG (2, {
-    fprintf (debug_file, "+++++++++++++MIR after rewrite:\n");
+    bprintf (debug_file, "+++++++++++++MIR after rewrite:\n");
     print_CFG (gen_ctx, FALSE, FALSE, TRUE, FALSE, NULL);
   });
 #ifndef NO_COMBINE
@@ -5434,24 +5434,24 @@ void *MIR_gen (MIR_context_t ctx, int gen_num, MIR_item_t func_item) {
     calculate_func_cfg_live_info (gen_ctx, FALSE);
     add_bb_insn_dead_vars (gen_ctx);
     DEBUG (2, {
-      fprintf (debug_file, "+++++++++++++MIR before combine:\n");
+      bprintf (debug_file, "+++++++++++++MIR before combine:\n");
       print_CFG (gen_ctx, FALSE, FALSE, TRUE, FALSE, NULL);
     });
     combine (gen_ctx); /* After combine the BB live info is still valid */
     DEBUG (2, {
-      fprintf (debug_file, "+++++++++++++MIR after combine:\n");
+      bprintf (debug_file, "+++++++++++++MIR after combine:\n");
       print_CFG (gen_ctx, FALSE, FALSE, TRUE, FALSE, NULL);
     });
     dead_code_elimination (gen_ctx);
     DEBUG (2, {
-      fprintf (debug_file, "+++++++++++++MIR after dead code elimination after combine:\n");
+      bprintf (debug_file, "+++++++++++++MIR after dead code elimination after combine:\n");
       print_CFG (gen_ctx, TRUE, TRUE, TRUE, FALSE, output_bb_live_info);
     });
   }
 #endif /* #ifndef NO_COMBINE */
   target_make_prolog_epilog (gen_ctx, func_used_hard_regs, func_stack_slots_num);
   DEBUG (2, {
-    fprintf (debug_file, "+++++++++++++MIR after forming prolog/epilog:\n");
+    bprintf (debug_file, "+++++++++++++MIR after forming prolog/epilog:\n");
     print_CFG (gen_ctx, FALSE, FALSE, TRUE, FALSE, NULL);
   });
   code = target_translate (gen_ctx, &code_len);
@@ -5462,14 +5462,14 @@ void *MIR_gen (MIR_context_t ctx, int gen_num, MIR_item_t func_item) {
 #endif
   DEBUG (2, {
     _MIR_dump_code (NULL, gen_ctx->gen_num, machine_code, code_len);
-    fprintf (debug_file, "code size = %lu:\n", (unsigned long) code_len);
+    bprintf (debug_file, "code size = %lu:\n", (unsigned long) code_len);
   });
   _MIR_redirect_thunk (ctx, func_item->addr, func_item->u.func->call_addr);
   destroy_func_live_ranges (gen_ctx);
   if (optimize_level != 0) destroy_loop_tree (gen_ctx, curr_cfg->root_loop_node);
   destroy_func_cfg (gen_ctx);
   DEBUG (0, {
-    fprintf (debug_file,
+    bprintf (debug_file,
              "  Code generation for %s: %lu MIR insns (addr=%llx, len=%lu) -- time %.2f ms\n",
              MIR_item_name (ctx, func_item),
              (long unsigned) DLIST_LENGTH (MIR_insn_t, func_item->u.func->insns),
@@ -5489,14 +5489,14 @@ void *MIR_gen (MIR_context_t ctx, int gen_num, MIR_item_t func_item) {
   return func_item->addr;
 }
 
-void MIR_gen_set_debug_file (MIR_context_t ctx, int gen_num, FILE *f) {
+void MIR_gen_set_debug_file (MIR_context_t ctx, int gen_num, buffer_t *f) {
 #if !MIR_NO_GEN_DEBUG
   struct all_gen_ctx *all_gen_ctx = *all_gen_ctx_loc (ctx);
   gen_ctx_t gen_ctx;
 
   if (all_gen_ctx == NULL) {
-    fprintf (stderr, "Calling MIR_gen_set_debug_file before MIR_gen_init -- good bye\n");
-    exit (1);
+    ERROR ("Calling MIR_gen_set_debug_file before MIR_gen_init -- good bye");
+    ASSERT (0);
   }
 #if !MIR_PARALLEL_GEN
   gen_num = 0;
@@ -5513,8 +5513,8 @@ void MIR_gen_set_debug_level (MIR_context_t ctx, int gen_num, int level) {
   gen_ctx_t gen_ctx;
 
   if (all_gen_ctx == NULL) {
-    fprintf (stderr, "Calling MIR_gen_set_debug_level before MIR_gen_init -- good bye\n");
-    exit (1);
+    ERROR ("Calling MIR_gen_set_debug_level before MIR_gen_init -- good bye");
+    ASSERT (0);
   }
 #if !MIR_PARALLEL_GEN
   gen_num = 0;
@@ -5784,5 +5784,5 @@ void MIR_set_lazy_gen_interface (MIR_context_t ctx, MIR_item_t func_item) {
 
 /* Local Variables:                */
 /* mode: c                         */
-/* page-delimiter: "/\\* New Page" */
+/* phys-delimiter: "/\\* New Page" */
 /* End:                            */

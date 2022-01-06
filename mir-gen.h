@@ -17,7 +17,7 @@ extern "C" {
 #endif
 
 extern void MIR_gen_init (MIR_context_t ctx, int gens_num);
-extern void MIR_gen_set_debug_file (MIR_context_t ctx, int gen_num, FILE *f);
+extern void MIR_gen_set_debug_file (MIR_context_t ctx, int gen_num, buffer_t *f);
 extern void MIR_gen_set_debug_level (MIR_context_t ctx, int gen_num, int debug_level);
 extern void MIR_gen_set_optimize_level (MIR_context_t ctx, int gen_num, unsigned int level);
 extern void *MIR_gen (MIR_context_t ctx, int gen_num, MIR_item_t func_item);

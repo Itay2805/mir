@@ -6,10 +6,6 @@
 
 #define MIR_BITMAP_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
 #include <stdint.h>
 #include <limits.h>
 #include "mir-varr.h"
@@ -26,8 +22,8 @@
 
 #else
 static inline void mir_bitmap_assert_fail (const char *op) {
-  fprintf (stderr, "wrong %s for a bitmap", op);
-  assert (0);
+  ERROR ("wrong %s for a bitmap", op);
+  ASSERT (0);
 }
 
 #define BITMAP_ASSERT(EXPR, OP) (void) ((EXPR) ? 0 : (mir_bitmap_assert_fail (#OP), 0))

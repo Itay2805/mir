@@ -14,9 +14,10 @@ extern "C" {
 #error "MIR does not work on 32-bit Windows"
 #endif
 
-#include <stdio.h>
+#include <util/except.h>
+#include <util/defs.h>
 #include <stdint.h>
-#include <assert.h>
+#include <util/buffer.h>
 #include "mir-dlist.h"
 #include "mir-varr.h"
 #include "mir-htab.h"
@@ -26,7 +27,7 @@ extern "C" {
 #ifdef NDEBUG
 static inline int mir_assert (int cond) { return 0 && cond; }
 #else
-#define mir_assert(cond) assert (cond)
+#define mir_assert(cond) ASSERT (cond)
 #endif
 
 #define FALSE 0
@@ -466,10 +467,9 @@ extern MIR_context_t _MIR_init (void);
 /* Use only the following API to create MIR code.  */
 static inline MIR_context_t MIR_init (void) {
   if (MIR_API_VERSION != _MIR_get_api_version ()) {
-    fprintf (stderr,
-             "mir.h header has version %g different from used mir code version %g -- good bye!\n",
+    ERROR ("mir.h header has version %g different from used mir code version %g -- good bye!",
              MIR_API_VERSION, _MIR_get_api_version ());
-    exit (1);
+    ASSERT (0);
   }
   return _MIR_init ();
 }
@@ -561,17 +561,17 @@ extern void MIR_change_module_ctx (MIR_context_t old_ctx, MIR_module_t m, MIR_co
 extern MIR_insn_code_t MIR_reverse_branch_code (MIR_insn_code_t code);
 
 extern const char *MIR_type_str (MIR_context_t ctx, MIR_type_t tp);
-extern void MIR_output_op (MIR_context_t ctx, FILE *f, MIR_op_t op, MIR_func_t func);
-extern void MIR_output_insn (MIR_context_t ctx, FILE *f, MIR_insn_t insn, MIR_func_t func,
+extern void MIR_output_op (MIR_context_t ctx, buffer_t *f, MIR_op_t op, MIR_func_t func);
+extern void MIR_output_insn (MIR_context_t ctx, buffer_t *f, MIR_insn_t insn, MIR_func_t func,
                              int newline_p);
-extern void MIR_output_item (MIR_context_t ctx, FILE *f, MIR_item_t item);
-extern void MIR_output_module (MIR_context_t ctx, FILE *f, MIR_module_t module);
-extern void MIR_output (MIR_context_t ctx, FILE *f);
+extern void MIR_output_item (MIR_context_t ctx, buffer_t *f, MIR_item_t item);
+extern void MIR_output_module (MIR_context_t ctx, buffer_t *f, MIR_module_t module);
+extern void MIR_output (MIR_context_t ctx, buffer_t *f);
 
 #if !MIR_NO_IO
-extern void MIR_write (MIR_context_t ctx, FILE *f);
-extern void MIR_write_module (MIR_context_t ctx, FILE *f, MIR_module_t module);
-extern void MIR_read (MIR_context_t ctx, FILE *f);
+extern void MIR_write (MIR_context_t ctx, buffer_t *f);
+extern void MIR_write_module (MIR_context_t ctx, buffer_t *f, MIR_module_t module);
+extern void MIR_read (MIR_context_t ctx, buffer_t *f);
 extern void MIR_write_with_func (MIR_context_t ctx,
                                  int (*const writer_func) (MIR_context_t, uint8_t));
 extern void MIR_write_module_with_func (MIR_context_t ctx,

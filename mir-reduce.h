@@ -30,9 +30,11 @@
     o [uint for symbol lenght]*, symbol string,
     o [uint for ref len]*, symbol number as uint */
 
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+#include <util/string.h>
+#include <util/except.h>
+#include <util/defs.h>
+#include <mem/mem.h>
+
 #include "mir-hash.h"
 
 #define FALSE 0
@@ -111,7 +113,7 @@ static inline uint32_t _reduce_ref_offset_size (uint32_t offset) {
 }
 
 static inline uint32_t _reduce_ref_size (uint32_t len, uint32_t offset) {
-  assert (len >= _REDUCE_START_LEN);
+  ASSERT (len >= _REDUCE_START_LEN);
   len -= _REDUCE_START_LEN - 1;
   return ((len < _REDUCE_REF_TAG_LONG ? 0 : _reduce_ref_offset_size (len))
           + _reduce_ref_offset_size (offset));
@@ -120,7 +122,7 @@ static inline uint32_t _reduce_ref_size (uint32_t len, uint32_t offset) {
 static inline void _reduce_uint_write (struct reduce_data *data, uint32_t u) {
   int n;
 
-  assert (u < (1 << 7 * 4));
+  ASSERT (u < (1 << 7 * 4));
   for (n = 1; n <= 4 && u >= (1 << 7 * n); n++)
     ;
   _reduce_put (data, (1 << (8 - n)) | ((u >> (n - 1) * 8) & 0xff)); /* tag */
@@ -134,7 +136,7 @@ static inline int64_t _reduce_uint_read (reduce_reader_t reader, void *aux_data)
   if (r < 0) return -1;
   for (u = (uint32_t) r, n = 1; n <= 4 && (u >> (8 - n)) != 1; n++)
     ;
-  assert ((u >> (8 - n)) == 1);
+  ASSERT ((u >> (8 - n)) == 1);
   v = u & (0xff >> n);
   for (i = 1; i < n; i++) {
     if ((r = _reduce_get (reader, aux_data)) < 0) return -1;
@@ -183,7 +185,7 @@ static inline void _reduce_output_byte (struct reduce_data *data, uint32_t pos) 
 static inline void _reduce_output_ref (struct reduce_data *data, uint32_t offset, uint32_t len) {
   uint32_t ref_tag;
 
-  assert (len >= _REDUCE_START_LEN);
+  ASSERT (len >= _REDUCE_START_LEN);
   len -= _REDUCE_START_LEN - 1;
   ref_tag = len < _REDUCE_REF_TAG_LONG ? len : _REDUCE_REF_TAG_LONG;
   _reduce_symb_flush (data, ref_tag);
@@ -217,7 +219,7 @@ static inline uint32_t _reduce_dict_find_longest (struct reduce_data *data, uint
     s1 = &data->buf[el->pos];
     s2 = &data->buf[pos];
 #if MIR_HASH_UNALIGNED_ACCESS
-    assert (_REDUCE_START_LEN >= 4);
+    ASSERT (_REDUCE_START_LEN >= 4);
     if (*(uint32_t *) &s1[0] != *(uint32_t *) &s2[0]) continue;
     len = 4;
 #else
@@ -409,7 +411,7 @@ static inline int reduce_decode_get (struct reduce_data *data) {
       pos += ref_len;
     }
     if (pos >= _REDUCE_BUF_LEN) {
-      assert (pos == _REDUCE_BUF_LEN);
+      ASSERT (pos == _REDUCE_BUF_LEN);
       data->check_hash = mir_hash_strict (data->buf, pos, data->check_hash);
       data->buf_bound = _REDUCE_BUF_LEN;
       decode_data->buf_get_pos = 0;

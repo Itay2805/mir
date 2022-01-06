@@ -5,9 +5,9 @@
 #ifndef MIR_VARR_H
 #define MIR_VARR_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
+#include <util/except.h>
+#include <util/defs.h>
+#include <mem/malloc.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,8 +22,8 @@ extern "C" {
 
 #else
 static inline void mir_varr_assert_fail (const char *op, const char *var) {
-  fprintf (stderr, "wrong %s for %s", op, var);
-  assert (0);
+  ERROR ("wrong %s for %s", op, var);
+  ASSERT (0);
 }
 
 #define VARR_ASSERT(EXPR, OP, T) (void) ((EXPR) ? 0 : (mir_varr_assert_fail (OP, #T), 0))
@@ -41,11 +41,10 @@ static inline void mir_varr_assert_fail (const char *op, const char *var) {
 static inline void MIR_VARR_NO_RETURN mir_varr_error (const char *message) {
 #ifdef MIR_VARR_ERROR
   MIR_VARR_ERROR (message);
-  assert (0);
 #else
-  fprintf (stderr, "%s\n", message);
+  ERROR ("%s", message);
 #endif
-  exit (1);
+    ASSERT (0);
 }
 
 /*---------------- Typed variable length arrays -----------------------------*/
